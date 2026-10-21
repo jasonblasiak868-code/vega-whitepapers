@@ -92,6 +92,27 @@ Each kit does one job and runs alone. Together they cover the path from "a perso
 
 ## 5. The mechanisms in detail
 
+### 5.0 Where the controls sit: outside the model, between two gates
+
+Most approaches to AI safety try to make the model behave: training, prompts, policies, or a second model checking the first. The design in this paper does something different. **The model is placed between two gates inside a controlled environment, and every crossing is decided by a person's signed commitment, never by the model.**
+
+```mermaid
+flowchart LR
+    W1[Outside world and data] --> IG[Entry gate: inbound commitment]
+    IG --> PRE[Controlled environment: the model computes here, with no way out]
+    PRE --> XG[Exit gate: outbound commitment]
+    XG --> W2[Outside world]
+    ATC[Air traffic controller role] -.governs.-> IG
+    ATC -.governs.-> XG
+    H[Human signs] --> ATC
+```
+
+- **Two commitment gates.** An entry commitment lets named data or context reach the model. An exit commitment lets a named result or action leave. Both are single-use, time-limited and bound to the exact thing they cover.
+- **The air traffic controller role.** One governing role decides what may enter and what may leave. It can let new data reach the model so the model can compute with it *before* the exit commitment is authorised, because computing inside the controlled environment changes nothing outside it. Only the exit needs the final signature. The same role handles a **research card**: a commitment scoped to gathering named data, so the model can fetch what it needs without open-ended network access.
+- **Not in the model.** The control does not depend on the model's training, honesty or cooperation. A mistaken or manipulated model still cannot cross a gate without a person's signature, and every crossing sits on a hash chain anyone can verify.
+
+**What is code and what is design.** The two-gate corridor (entry gate, contained run, exit review, hard stop) is in the two-gate kit; admission of inbound adapters and the dead-end quarantine are in the pareah kit; the single-use commitment and gate are in the governance-jacket kit. The air traffic controller as one named role and the research card as a named card type describe the architecture those kits implement together; they are not a single module in the published code. This section contrasts the design with prompt-level and policy-level approaches in general terms. It makes no claim about any particular product, and no prior-art search is stated or implied.
+
 ### 5.1 The council: equal brains, anonymous review, dissent that cannot be hidden
 
 **The published code** (`vega-council-sdk`). Several brains, each a pair of functions the caller supplies, answer the same prompt with no roles or ranks. Each then sees the *other* answers under shuffled anonymous labels and returns a stance on each: validate, challenge or extend. A brain's stance on its own answer is dropped. Brains of one family count as a single voice per answer, so five copies of one model cannot stuff the ballot. The bar is a majority of families. The outcome is one of CONSENSUS, CONSENSUS_WITH_DISSENT, CONSENSUS_SEVERAL (several answers cleared and none was challenged, so no single winner is invented), SPLIT (a human decides) or INSUFFICIENT. A paid brain is asked only when a human-signed commitment check returns exactly true. The record holds hashes and counts, not answers.
